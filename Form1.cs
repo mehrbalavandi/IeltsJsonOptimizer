@@ -5,7 +5,11 @@ using System.Text.Json.Nodes;
 namespace IeltsJsonOptimizer
 {
     public partial class Form1 : Form
-    {
+    {// شمارنده برای تولید شناسه‌های ثابت و قابل پیش‌بینی
+        private int _nodeCounter = 1;
+
+        // نگهداری JSON اصلی در حافظه فرم تا زمان ادغام
+        private JsonNode _originalJsonNode;
         public Form1()
         {
             InitializeComponent();
@@ -72,13 +76,11 @@ namespace IeltsJsonOptimizer
                 bool hasValidParagraphs = false;
                 bool hasValidDirectSpans = false;
 
-                // شرط ارتقا یافته: آیا Span متنی وجود دارد که هنوز خوانده و مصرف نشده باشد؟
                 if (obj.ContainsKey("Paragraphs") && obj["Paragraphs"] is JsonArray paragraphsArray)
                 {
                     hasValidParagraphs = paragraphsArray.OfType<JsonObject>().Any(p =>
                         p.ContainsKey("Spans") && p["Spans"] is JsonArray spansArray &&
-                        spansArray.OfType<JsonObject>().Any(s =>
-                            s.ContainsKey("Type") && s["Type"]?.ToString() == "text" && !s.ContainsKey("_isConsumed"))
+                        spansArray.OfType<JsonObject>().Any(s => s.ContainsKey("Type") && s["Type"]?.ToString() == "text" && !s.ContainsKey("_isConsumed"))
                     );
                 }
                 else if (obj.ContainsKey("Spans") && obj["Spans"] is JsonArray directSpansArray)
@@ -90,7 +92,10 @@ namespace IeltsJsonOptimizer
 
                 if (hasValidParagraphs || hasValidDirectSpans)
                 {
-                    string tempId = Guid.NewGuid().ToString();
+                    // تغییر مهم: استفاده از شمارنده به جای GUID
+                    string tempId = $"item_{_nodeCounter}";
+                    _nodeCounter++; // افزایش شمارنده برای آیتم بعدی
+
                     obj["_tempId"] = tempId;
 
                     string allContents = "";
@@ -119,7 +124,6 @@ namespace IeltsJsonOptimizer
                     }
                 }
 
-                // ادامه پیمایش عمیق (دیگر نگران تکرار نیستیم چون متن‌های قبلی تگ خورده‌اند)
                 foreach (var kvp in obj.ToList())
                 {
                     ExtractPayloadsRecursive(kvp.Value, payloadForGemini);
@@ -251,6 +255,83 @@ namespace IeltsJsonOptimizer
             ]";
 
             return aiSimulatedString;
+        }
+
+        private void btnGeneratePayload_Click(object sender, EventArgs e)
+        {
+            try
+            {
+
+                var options = new JsonSerializerOptions { WriteIndented = true };
+                string inputJson = rtbInput.Text;
+                _originalJsonNode = JsonNode.Parse(inputJson);
+
+                JsonNode rootNode = JsonNode.Parse(inputJson);
+                JsonArray originalArray = rootNode.AsArray();
+
+                // ۱. استخراج بازگشتی: تمام گره‌های تو در تو بررسی می‌شوند
+                JsonArray payloadForGemini = new JsonArray();
+                ExtractPayloadsRecursive(originalArray, payloadForGemini);
+
+                string jsonToSend = payloadForGemini.ToJsonString(options);
+
+                // اگر پس از جستجو چیزی پیدا نشد، متوقف می‌شویم
+                if (payloadForGemini.Count == 0)
+                {
+                    MessageBox.Show("هیچ Paragraph دارای Span متنی در ورودی یافت نشد!");
+                    return;
+                }
+
+
+                rtbJsonToSend.Text = payloadForGemini.ToJsonString(options);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("خطا در تولید ساختار: " + ex.Message);
+            }
+        }
+
+        private void btnMergeAiResponse_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                // خواندن متنی که به صورت دستی در RichTextBox دوم Paste شده است
+                string aiResponseText = rtbAiResponse.Text;
+
+                if (string.IsNullOrWhiteSpace(aiResponseText))
+                {
+                    MessageBox.Show("لطفاً پاسخ هوش مصنوعی را در کادر مربوطه Paste کنید.");
+                    return;
+                }
+
+                if (_originalJsonNode == null)
+                {
+                    MessageBox.Show("فایل اصلی لود نشده است. لطفاً ابتدا مرحله استخراج را انجام دهید.");
+                    return;
+                }
+
+                // تبدیل متن دریافتی به ساختار مد نظر ما (AiResponseWrapper کلاسی است که قبلاً داشتید)
+                var aiData = JsonSerializer.Deserialize<AiResponseWrapper>(aiResponseText);
+
+                if (aiData?.Data != null)
+                {
+                    // فراخوانی متد ادغام (همان متدی که تگ‌های isConsumed و tempId را پاک می‌کرد)
+                    MergeTranslationsRecursive(_originalJsonNode, aiData);
+
+                    // خروجی نهایی و ترجمه شده آماده است! آن را ذخیره یا نمایش دهید
+                    var options = new JsonSerializerOptions { WriteIndented = true };
+                    string finalOutput = _originalJsonNode.ToJsonString(options);
+
+                    // مثلاً ذخیره در یک فایل جدید یا نمایش در یک RichTextBox سوم
+                    System.IO.File.WriteAllText("output_translated.json", finalOutput);
+
+                    MessageBox.Show("ادغام با موفقیت انجام شد و فایل نهایی ساخته شد!");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("خطا در ادغام اطلاعات (شاید فرمت JSON دریافتی از هوش مصنوعی معتبر نیست): " + ex.Message);
+            }
         }
     }
 }
