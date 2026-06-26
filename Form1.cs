@@ -63,7 +63,7 @@ namespace IeltsJsonOptimizer
         }
 
         /// <summary>
-        /// متد بازگشتی برای جستجوی عمیق JSON و استخراج فیلدهای متنی به صورت کاملاً پاکسازی شده
+        /// متد بازگشتی برای جستجوی عمیق JSON، استخراج و چسباندن متن‌ها برای تولید allContents
         /// </summary>
         private void ExtractPayloadsRecursive(JsonNode node, JsonArray payloadForGemini)
         {
@@ -72,19 +72,19 @@ namespace IeltsJsonOptimizer
                 bool hasValidParagraphs = false;
                 bool hasValidDirectSpans = false;
 
-                // بررسی حالت اول (وجود Paragraphs)
+                // شرط ارتقا یافته: آیا Span متنی وجود دارد که هنوز خوانده و مصرف نشده باشد؟
                 if (obj.ContainsKey("Paragraphs") && obj["Paragraphs"] is JsonArray paragraphsArray)
                 {
                     hasValidParagraphs = paragraphsArray.OfType<JsonObject>().Any(p =>
                         p.ContainsKey("Spans") && p["Spans"] is JsonArray spansArray &&
-                        spansArray.OfType<JsonObject>().Any(s => s.ContainsKey("Type") && s["Type"]?.ToString() == "text")
+                        spansArray.OfType<JsonObject>().Any(s =>
+                            s.ContainsKey("Type") && s["Type"]?.ToString() == "text" && !s.ContainsKey("_isConsumed"))
                     );
                 }
-                // بررسی حالت دوم (وجود Spans مستقیم)
                 else if (obj.ContainsKey("Spans") && obj["Spans"] is JsonArray directSpansArray)
                 {
                     hasValidDirectSpans = directSpansArray.OfType<JsonObject>().Any(s =>
-                        s.ContainsKey("Type") && s["Type"]?.ToString() == "text"
+                        s.ContainsKey("Type") && s["Type"]?.ToString() == "text" && !s.ContainsKey("_isConsumed")
                     );
                 }
 
@@ -93,23 +93,33 @@ namespace IeltsJsonOptimizer
                     string tempId = Guid.NewGuid().ToString();
                     obj["_tempId"] = tempId;
 
-                    var lightItem = new JsonObject { ["id"] = tempId };
+                    string allContents = "";
 
-                    // به جای کپی کردن کل ساختار، فقط نسخه پاکسازی شده (فیلتر شده) را اضافه می‌کنیم
                     if (hasValidParagraphs)
                     {
-                        lightItem["Paragraphs"] = BuildCleanParagraphs(obj["Paragraphs"] as JsonArray);
+                        allContents = GetTextFromParagraphs(obj["Paragraphs"] as JsonArray);
                     }
                     else if (hasValidDirectSpans)
                     {
-                        lightItem["Spans"] = BuildCleanSpans(obj["Spans"] as JsonArray);
+                        allContents = GetTextFromSpans(obj["Spans"] as JsonArray);
                     }
 
-                    payloadForGemini.Add(lightItem);
+                    if (!string.IsNullOrWhiteSpace(allContents))
+                    {
+                        var lightItem = new JsonObject
+                        {
+                            ["id"] = tempId,
+                            ["allContents"] = allContents.Trim()
+                        };
+                        payloadForGemini.Add(lightItem);
+                    }
+                    else
+                    {
+                        obj.Remove("_tempId");
+                    }
                 }
 
-                // جستجو در عمق تمام فیلدهای این آبجکت برای پیدا کردن متن‌های مخفی شده 
-                // (مثلاً اگر داخل یک Paragraph جدولی باشد که خودش متن دارد)
+                // ادامه پیمایش عمیق (دیگر نگران تکرار نیستیم چون متن‌های قبلی تگ خورده‌اند)
                 foreach (var kvp in obj.ToList())
                 {
                     ExtractPayloadsRecursive(kvp.Value, payloadForGemini);
@@ -125,53 +135,54 @@ namespace IeltsJsonOptimizer
         }
 
         /// <summary>
-        /// فیلتر کردن Paragraphs: حذف همه چیز به جز Spans متنی
+        /// استخراج تمام متن‌ها از آرایه Paragraphs و چسباندن آن‌ها با خط جدید
         /// </summary>
-        private JsonArray BuildCleanParagraphs(JsonArray originalParagraphs)
+        private string GetTextFromParagraphs(JsonArray paragraphs)
         {
-            var cleanParagraphs = new JsonArray();
-            foreach (var pNode in originalParagraphs.OfType<JsonObject>())
+            List<string> paragraphTexts = new List<string>();
+            foreach (var pNode in paragraphs.OfType<JsonObject>())
             {
                 if (pNode.ContainsKey("Spans") && pNode["Spans"] is JsonArray spansArray)
                 {
-                    var cleanSpans = BuildCleanSpans(spansArray);
-                    // فقط در صورتی پاراگراف را اضافه می‌کنیم که محتوای متنی در دل آن باقی مانده باشد
-                    if (cleanSpans.Count > 0)
+                    string spanText = GetTextFromSpans(spansArray);
+                    if (!string.IsNullOrWhiteSpace(spanText))
                     {
-                        cleanParagraphs.Add(new JsonObject { ["Spans"] = cleanSpans });
+                        paragraphTexts.Add(spanText);
                     }
                 }
             }
-            return cleanParagraphs;
+            return string.Join("\n", paragraphTexts);
         }
 
         /// <summary>
-        /// فیلتر کردن Spans: استخراج Type و Content و حذف رنگ، فونت، استایل و...
+        /// استخراج تمام متن‌ها از آرایه Spans و چسباندن مستقیم آن‌ها
         /// </summary>
-        private JsonArray BuildCleanSpans(JsonArray originalSpans)
+        private string GetTextFromSpans(JsonArray spans)
         {
-            var cleanSpans = new JsonArray();
-            foreach (var sNode in originalSpans.OfType<JsonObject>())
+            List<string> spanTexts = new List<string>();
+            foreach (var sNode in spans.OfType<JsonObject>())
             {
-                if (sNode.ContainsKey("Type") && sNode["Type"]?.ToString() == "text" && sNode.ContainsKey("Content"))
+                // فقط در صورتی متن را می‌گیریم که مصرف نشده باشد
+                if (sNode.ContainsKey("Type") && sNode["Type"]?.ToString() == "text" && sNode.ContainsKey("Content") && !sNode.ContainsKey("_isConsumed"))
                 {
-                    cleanSpans.Add(new JsonObject
-                    {
-                        ["Type"] = "text",
-                        ["Content"] = sNode["Content"].DeepClone()
-                    });
+                    spanTexts.Add(sNode["Content"].ToString());
+
+                    // بلافاصله این گره را علامت‌گذاری می‌کنیم تا در پیمایش‌های عمیق‌تر دوباره خوانده نشود
+                    sNode["_isConsumed"] = true;
                 }
             }
-            return cleanSpans;
+            return string.Join("", spanTexts);
         }
-        /// <summary>
-        /// متد بازگشتی برای جستجوی عمیق و ادغام ترجمه‌ها
-        /// </summary>
         private void MergeTranslationsRecursive(JsonNode node, AiResponseWrapper aiData)
         {
             if (node is JsonObject obj)
             {
-                // اگر این همون آبجکتیه که موقع استخراج بهش شناسه موقت دادیم
+                // پاکسازی فلگ مصرف‌شدگی
+                if (obj.ContainsKey("_isConsumed"))
+                {
+                    obj.Remove("_isConsumed");
+                }
+
                 if (obj.TryGetPropertyValue("_tempId", out JsonNode idNode))
                 {
                     string id = idNode.ToString();
@@ -201,7 +212,6 @@ namespace IeltsJsonOptimizer
                 }
             }
         }
-
         // متد شبیه‌ساز (همان متد اصلاح‌شده در پیام قبلی)
         private async Task<string> SimulateGeminiApiAsync(string payloadText)
         {
