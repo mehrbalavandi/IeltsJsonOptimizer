@@ -1,8 +1,7 @@
-﻿using JsonOptimizerApp;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Encodings.Web;
+using System.Text.Encodings.Web; // برای رفع مشکل یونیکد حروف فارسی و عربی
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
@@ -23,60 +22,48 @@ namespace IeltsJsonOptimizer
             InitializeComponent();
         }
 
+        /// <summary>
+        /// متد بازگشتی برای جستجوی عمیق JSON و پیدا کردن هر آرایه Spans
+        /// </summary>
         private void ExtractPayloadsRecursive(JsonNode node, JsonArray payloadForGemini)
         {
             if (node is JsonObject obj)
             {
-                bool hasValidParagraphs = false;
-                bool hasValidDirectSpans = false;
-
-                if (obj.ContainsKey("Paragraphs") && obj["Paragraphs"] is JsonArray paragraphsArray)
+                // بررسی می‌کنیم که آیا این شیء دارای کلید Spans هست و آیا متن مصرف‌نشده‌ای دارد یا خیر
+                if (obj.ContainsKey("Spans") && obj["Spans"] is JsonArray spansArray)
                 {
-                    hasValidParagraphs = paragraphsArray.OfType<JsonObject>().Any(p =>
-                        p.ContainsKey("Spans") && p["Spans"] is JsonArray spansArray &&
-                        spansArray.OfType<JsonObject>().Any(s => s.ContainsKey("Type") && s["Type"]?.ToString() == "text" && !s.ContainsKey("_isConsumed"))
-                    );
-                }
-                else if (obj.ContainsKey("Spans") && obj["Spans"] is JsonArray directSpansArray)
-                {
-                    hasValidDirectSpans = directSpansArray.OfType<JsonObject>().Any(s =>
+                    bool hasValidTextSpan = spansArray.OfType<JsonObject>().Any(s =>
                         s.ContainsKey("Type") && s["Type"]?.ToString() == "text" && !s.ContainsKey("_isConsumed")
                     );
-                }
 
-                if (hasValidParagraphs || hasValidDirectSpans)
-                {
-                    string tempId = $"item_{_nodeCounter}";
-                    _nodeCounter++;
-
-                    obj["_tempId"] = tempId;
-
-                    string allContents = "";
-
-                    if (hasValidParagraphs)
+                    if (hasValidTextSpan)
                     {
-                        allContents = GetTextFromParagraphs(obj["Paragraphs"] as JsonArray);
-                    }
-                    else if (hasValidDirectSpans)
-                    {
-                        allContents = GetTextFromSpans(obj["Spans"] as JsonArray);
-                    }
+                        string tempId = $"item_{_nodeCounter}";
+                        _nodeCounter++;
 
-                    if (!string.IsNullOrWhiteSpace(allContents))
-                    {
-                        var lightItem = new JsonObject
+                        // شناسه موقت را به همان شیءای می‌دهیم که شامل Spans است
+                        obj["_tempId"] = tempId;
+
+                        // استخراج متن تمام Spansهای زیرمجموعه
+                        string allContents = GetTextFromSpans(spansArray);
+
+                        if (!string.IsNullOrWhiteSpace(allContents))
                         {
-                            ["id"] = tempId,
-                            ["allContents"] = allContents.Trim()
-                        };
-                        payloadForGemini.Add(lightItem);
-                    }
-                    else
-                    {
-                        obj.Remove("_tempId");
+                            var lightItem = new JsonObject
+                            {
+                                ["id"] = tempId,
+                                ["allContents"] = allContents.Trim()
+                            };
+                            payloadForGemini.Add(lightItem);
+                        }
+                        else
+                        {
+                            obj.Remove("_tempId");
+                        }
                     }
                 }
 
+                // ادامه جستجو در عمق سایر فیلدهای این آبجکت برای پیدا کردن Spansهای تو در تو
                 foreach (var kvp in obj.ToList())
                 {
                     ExtractPayloadsRecursive(kvp.Value, payloadForGemini);
@@ -91,23 +78,9 @@ namespace IeltsJsonOptimizer
             }
         }
 
-        private string GetTextFromParagraphs(JsonArray paragraphs)
-        {
-            List<string> paragraphTexts = new List<string>();
-            foreach (var pNode in paragraphs.OfType<JsonObject>())
-            {
-                if (pNode.ContainsKey("Spans") && pNode["Spans"] is JsonArray spansArray)
-                {
-                    string spanText = GetTextFromSpans(spansArray);
-                    if (!string.IsNullOrWhiteSpace(spanText))
-                    {
-                        paragraphTexts.Add(spanText);
-                    }
-                }
-            }
-            return string.Join("\n", paragraphTexts);
-        }
-
+        /// <summary>
+        /// استخراج تمام متن‌ها از آرایه Spans و چسباندن مستقیم آن‌ها
+        /// </summary>
         private string GetTextFromSpans(JsonArray spans)
         {
             List<string> spanTexts = new List<string>();
@@ -116,36 +89,46 @@ namespace IeltsJsonOptimizer
                 if (sNode.ContainsKey("Type") && sNode["Type"]?.ToString() == "text" && sNode.ContainsKey("Content") && !sNode.ContainsKey("_isConsumed"))
                 {
                     spanTexts.Add(sNode["Content"].ToString());
+
+                    // علامت‌گذاری به عنوان مصرف‌شده برای جلوگیری از تکرار
                     sNode["_isConsumed"] = true;
                 }
             }
             return string.Join("", spanTexts);
         }
 
+        /// <summary>
+        /// ادغام ترجمه‌ها با ساختار اصلی JSON
+        /// </summary>
         private void MergeTranslationsRecursive(JsonNode node, AiResponseWrapper aiData)
         {
             if (node is JsonObject obj)
             {
+                // پاکسازی فلگ مصرف‌شدگی
                 if (obj.ContainsKey("_isConsumed"))
                 {
                     obj.Remove("_isConsumed");
                 }
 
+                // اگر این شیء همان شیءای باشد که قبلاً حاوی Spans بود و شناسه موقت گرفت
                 if (obj.TryGetPropertyValue("_tempId", out JsonNode idNode))
                 {
                     string id = idNode.ToString();
-                    var translatedItem = aiData.Data.FirstOrDefault(x => x["id"]?.ToString() == id);
+
+                    // اصلاح اصلی: استفاده از x.id به جای x["id"]
+                    var translatedItem = aiData.Data.FirstOrDefault(x => x.id == id);
 
                     if (translatedItem != null)
                     {
-                        // اصلاح: افزودن ترجمه‌ها به عنوان گره متنی جدید (رشته)
-                        if (translatedItem["translationFa"] != null)
-                            obj["translationFa"] = translatedItem["translationFa"].ToString();
+                        // اصلاح دسترسی به پراپرتی‌ها با دات‌نوتیشن
+                        if (!string.IsNullOrEmpty(translatedItem.translationFa))
+                            obj["translationFa"] = translatedItem.translationFa;
 
-                        if (translatedItem["translationAr"] != null)
-                            obj["translationAr"] = translatedItem["translationAr"].ToString();
+                        if (!string.IsNullOrEmpty(translatedItem.translationAr))
+                            obj["translationAr"] = translatedItem.translationAr;
                     }
 
+                    // پاکسازی شناسه موقت
                     obj.Remove("_tempId");
                 }
 
@@ -163,15 +146,19 @@ namespace IeltsJsonOptimizer
             }
         }
 
+        // --- دکمه‌های رابط کاربری --- //
+
         private void btnGeneratePayload_Click(object sender, EventArgs e)
         {
             try
             {
+                // تنظیمات برای خروجی تمیز و حل مشکل یونیکد فارسی/عربی
                 var options = new JsonSerializerOptions
                 {
                     WriteIndented = true,
                     Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
                 };
+
                 string inputJson = rtbInput.Text;
 
                 // ریست کردن شمارنده در هر بار تولید Payload
@@ -179,8 +166,6 @@ namespace IeltsJsonOptimizer
 
                 // پارس کردن فایل اصلی
                 _originalJsonNode = JsonNode.Parse(inputJson);
-
-                // استفاده از همان فایل اصلی برای استخراج (جلوگیری از باگ رفرنس)
                 JsonArray originalArray = _originalJsonNode.AsArray();
 
                 JsonArray payloadForGemini = new JsonArray();
@@ -188,12 +173,12 @@ namespace IeltsJsonOptimizer
 
                 if (payloadForGemini.Count == 0)
                 {
-                    MessageBox.Show("هیچ Paragraph دارای Span متنی در ورودی یافت نشد!");
+                    MessageBox.Show("هیچ آرایه Spans دارای متن در ورودی یافت نشد!");
                     return;
                 }
 
                 rtbJsonToSend.Text = payloadForGemini.ToJsonString(options);
-                MessageBox.Show("Payload با موفقیت تولید شد.");
+                MessageBox.Show("Payload با موفقیت بر اساس آرایه Spans تولید شد.");
             }
             catch (Exception ex)
             {
@@ -219,14 +204,16 @@ namespace IeltsJsonOptimizer
                     return;
                 }
 
+                // آماده‌سازی پاسخ هوش مصنوعی برای پارس شدن
                 string parsableJson = "{\"Data\":" + aiResponseText + "}";
                 var aiData = JsonSerializer.Deserialize<AiResponseWrapper>(parsableJson);
 
                 if (aiData?.Data != null)
                 {
-                    // ادغام داده‌ها
+                    // ادغام داده‌ها در شیء اصلی حافظه
                     MergeTranslationsRecursive(_originalJsonNode, aiData);
 
+                    // اعمال تنظیمات برای حل مشکل یونیکد
                     var options = new JsonSerializerOptions
                     {
                         WriteIndented = true,
@@ -252,7 +239,7 @@ namespace IeltsJsonOptimizer
                     }
 
                     rtbOutput.Text = customFormatOutput;
-                    MessageBox.Show("ادغام با موفقیت انجام شد!");
+                    MessageBox.Show("ادغام در سطح Spans با موفقیت انجام شد!");
                 }
             }
             catch (Exception ex)
@@ -260,5 +247,19 @@ namespace IeltsJsonOptimizer
                 MessageBox.Show("خطا در ادغام اطلاعات (شاید فرمت JSON دریافتی معتبر نیست): " + ex.Message);
             }
         }
+    }
+
+    // کلاس‌های کمکی برای پارس کردن پاسخ مدل (در صورتی که در فایل دیگری نیستند)
+    public class AiResponseWrapper
+    {
+        public List<TranslationItem> Data { get; set; }
+        public List<object> Interactives { get; set; }
+    }
+
+    public class TranslationItem
+    {
+        public string id { get; set; }
+        public string translationFa { get; set; }
+        public string translationAr { get; set; }
     }
 }
