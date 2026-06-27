@@ -309,9 +309,11 @@ namespace IeltsJsonOptimizer
                     MessageBox.Show("فایل اصلی لود نشده است. لطفاً ابتدا مرحله استخراج را انجام دهید.");
                     return;
                 }
+                string parsableJson = "{\"Data\":" + aiResponseText + "}";
+                var aiData = JsonSerializer.Deserialize<AiResponseWrapper>(parsableJson);
 
                 // تبدیل متن دریافتی به ساختار مد نظر ما (AiResponseWrapper کلاسی است که قبلاً داشتید)
-                var aiData = JsonSerializer.Deserialize<AiResponseWrapper>(aiResponseText);
+                //var aiData = JsonSerializer.Deserialize<AiResponseWrapper>(aiResponseText);
 
                 if (aiData?.Data != null)
                 {
@@ -323,7 +325,8 @@ namespace IeltsJsonOptimizer
                     string finalOutput = _originalJsonNode.ToJsonString(options);
 
                     // مثلاً ذخیره در یک فایل جدید یا نمایش در یک RichTextBox سوم
-                    System.IO.File.WriteAllText("output_translated.json", finalOutput);
+                    //System.IO.File.WriteAllText("output_translated.json", finalOutput);
+                    rtbOutput.Text = finalOutput;
 
                     MessageBox.Show("ادغام با موفقیت انجام شد و فایل نهایی ساخته شد!");
                 }

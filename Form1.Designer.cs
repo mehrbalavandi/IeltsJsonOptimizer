@@ -78,7 +78,7 @@
             rtbAiResponse.Name = "rtbAiResponse";
             rtbAiResponse.Size = new Size(285, 606);
             rtbAiResponse.TabIndex = 4;
-            rtbAiResponse.Text = "\n";
+            rtbAiResponse.Text = resources.GetString("rtbAiResponse.Text");
             // 
             // btnGeneratePayload
             // 
