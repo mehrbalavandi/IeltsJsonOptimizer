@@ -31,7 +31,6 @@
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             rtbInput = new RichTextBox();
             rtbOutput = new RichTextBox();
-            btnProcess = new Button();
             rtbJsonToSend = new RichTextBox();
             rtbAiResponse = new RichTextBox();
             btnGeneratePayload = new Button();
@@ -53,16 +52,6 @@
             rtbOutput.Size = new Size(285, 606);
             rtbOutput.TabIndex = 1;
             rtbOutput.Text = "";
-            // 
-            // btnProcess
-            // 
-            btnProcess.Location = new Point(241, 631);
-            btnProcess.Name = "btnProcess";
-            btnProcess.Size = new Size(75, 23);
-            btnProcess.TabIndex = 2;
-            btnProcess.Text = "Process";
-            btnProcess.UseVisualStyleBackColor = true;
-            btnProcess.Click += btnProcess_Click;
             // 
             // rtbJsonToSend
             // 
@@ -111,7 +100,6 @@
             Controls.Add(btnGeneratePayload);
             Controls.Add(rtbAiResponse);
             Controls.Add(rtbJsonToSend);
-            Controls.Add(btnProcess);
             Controls.Add(rtbOutput);
             Controls.Add(rtbInput);
             Name = "Form1";
@@ -124,7 +112,6 @@
 
         private RichTextBox rtbInput;
         private RichTextBox rtbOutput;
-        private Button btnProcess;
         private RichTextBox rtbJsonToSend;
         private RichTextBox rtbAiResponse;
         private Button btnGeneratePayload;
