@@ -35,6 +35,7 @@
             rtbAiResponse = new RichTextBox();
             btnGeneratePayload = new Button();
             btnMergeAiResponse = new Button();
+            btnSelectFile = new Button();
             SuspendLayout();
             // 
             // rtbInput
@@ -72,7 +73,7 @@
             // btnGeneratePayload
             // 
             btnGeneratePayload.AutoSize = true;
-            btnGeneratePayload.Location = new Point(12, 629);
+            btnGeneratePayload.Location = new Point(119, 631);
             btnGeneratePayload.Name = "btnGeneratePayload";
             btnGeneratePayload.Size = new Size(106, 25);
             btnGeneratePayload.TabIndex = 5;
@@ -83,7 +84,7 @@
             // btnMergeAiResponse
             // 
             btnMergeAiResponse.AutoSize = true;
-            btnMergeAiResponse.Location = new Point(123, 629);
+            btnMergeAiResponse.Location = new Point(231, 631);
             btnMergeAiResponse.Name = "btnMergeAiResponse";
             btnMergeAiResponse.Size = new Size(112, 25);
             btnMergeAiResponse.TabIndex = 6;
@@ -91,11 +92,23 @@
             btnMergeAiResponse.UseVisualStyleBackColor = true;
             btnMergeAiResponse.Click += btnMergeAiResponse_Click;
             // 
+            // btnSelectFile
+            // 
+            btnSelectFile.AutoSize = true;
+            btnSelectFile.Location = new Point(12, 631);
+            btnSelectFile.Name = "btnSelectFile";
+            btnSelectFile.Size = new Size(101, 25);
+            btnSelectFile.TabIndex = 7;
+            btnSelectFile.Text = "Select Word File";
+            btnSelectFile.UseVisualStyleBackColor = true;
+            btnSelectFile.Click += btnSelectFile_Click;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1182, 664);
+            Controls.Add(btnSelectFile);
             Controls.Add(btnMergeAiResponse);
             Controls.Add(btnGeneratePayload);
             Controls.Add(rtbAiResponse);
@@ -116,5 +129,6 @@
         private RichTextBox rtbAiResponse;
         private Button btnGeneratePayload;
         private Button btnMergeAiResponse;
+        private Button btnSelectFile;
     }
 }
