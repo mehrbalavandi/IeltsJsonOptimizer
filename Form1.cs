@@ -18,6 +18,7 @@ using DocumentFormat.OpenXml.Wordprocessing;
 using BorderType = DocumentFormat.OpenXml.Wordprocessing.BorderType;
 using Text = DocumentFormat.OpenXml.Wordprocessing.Text;
 using Formatting = Newtonsoft.Json.Formatting;
+using Tulpep.NotificationWindow;
 
 namespace IeltsJsonOptimizer
 {
@@ -190,12 +191,26 @@ namespace IeltsJsonOptimizer
 
                 if (payloadForGemini.Count == 0)
                 {
-                    MessageBox.Show("هیچ آرایه Spans دارای متن در ورودی یافت نشد!");
+                    var popupError = new PopupNotifier
+                    {
+                        TitleText = "خطا",
+                        ContentText = "هیچ آرایه Spans دارای متن در ورودی یافت نشد!",
+                        Delay = 2000 // دو ثانیه
+                    };
+                    popupError.Popup();
+                    //MessageBox.Show("هیچ آرایه Spans دارای متن در ورودی یافت نشد!");
                     return;
                 }
-
+                var popupSuccess = new PopupNotifier
+                {
+                    TitleText = "موفق",
+                    ContentText = "Payload با موفقیت بر اساس آرایه Spans تولید شد.",
+                    Delay = 2000 // دو ثانیه
+                };
+                popupSuccess.Popup();
+                Clipboard.SetText(payloadForGemini.ToJsonString(options));
                 rtbJsonToSend.Text = payloadForGemini.ToJsonString(options);
-                MessageBox.Show("Payload با موفقیت بر اساس آرایه Spans تولید شد.");
+                //MessageBox.Show("Payload با موفقیت بر اساس آرایه Spans تولید شد.");
                 rtbAiResponse.Clear();
                 rtbOutput.Clear();
             }
@@ -213,13 +228,27 @@ namespace IeltsJsonOptimizer
 
                 if (string.IsNullOrWhiteSpace(aiResponseText))
                 {
-                    MessageBox.Show("لطفاً پاسخ هوش مصنوعی را در کادر مربوطه Paste کنید.");
+                    var popupError = new PopupNotifier
+                    {
+                        TitleText = "خطا",
+                        ContentText = "لطفاً پاسخ هوش مصنوعی را در کادر مربوطه Paste کنید.",
+                        Delay = 2000 // دو ثانیه
+                    };
+                    popupError.Popup();
+                    //MessageBox.Show("لطفاً پاسخ هوش مصنوعی را در کادر مربوطه Paste کنید.");
                     return;
                 }
 
                 if (_originalJsonNode == null)
                 {
-                    MessageBox.Show("فایل اصلی لود نشده است. لطفاً ابتدا مرحله تولید Payload را انجام دهید.");
+                    var popupError = new PopupNotifier
+                    {
+                        TitleText = "خطا",
+                        ContentText = "فایل اصلی لود نشده است. لطفاً ابتدا مرحله تولید Payload را انجام دهید.",
+                        Delay = 2000 // دو ثانیه
+                    };
+                    popupError.Popup();
+                    //MessageBox.Show("فایل اصلی لود نشده است. لطفاً ابتدا مرحله تولید Payload را انجام دهید.");
                     return;
                 }
 
@@ -258,7 +287,15 @@ namespace IeltsJsonOptimizer
                     }
 
                     rtbOutput.Text = customFormatOutput;
-                    MessageBox.Show("ادغام در سطح Spans با موفقیت انجام شد!");
+                    Clipboard.SetText(customFormatOutput);
+                    var popupSuccess = new PopupNotifier
+                    {
+                        TitleText = "موفق",
+                        ContentText = "ادغام در سطح Spans با موفقیت انجام شد!",
+                        Delay = 2000 // دو ثانیه
+                    };
+                    popupSuccess.Popup();
+                    //MessageBox.Show("ادغام در سطح Spans با موفقیت انجام شد!");
                 }
             }
             catch (Exception ex)
@@ -1633,6 +1670,41 @@ namespace IeltsJsonOptimizer
             if (!string.IsNullOrEmpty(width)) props.Add("widthDxa", width);
 
             return props;
+        }
+
+        private void btnPasteInput_Click(object sender, EventArgs e)
+        {
+            rtbInput.Text = Clipboard.GetText();
+            var popupSuccess = new PopupNotifier
+            {
+                TitleText = "موفق",
+                ContentText = "متن ورودی با موفقیت درج شد",
+                Delay = 1000 // یک ثانیه
+            };
+            popupSuccess.Popup();
+        }
+
+        private void btnPasteResponse_Click(object sender, EventArgs e)
+        {
+            rtbAiResponse.Text = Clipboard.GetText();
+            var popupSuccess = new PopupNotifier
+            {
+                TitleText = "موفق",
+                ContentText = "متن پاسخ هوش مصنوعی با موفقیت درج شد",
+                Delay = 1000 // یک ثانیه
+            };
+            popupSuccess.Popup();
+        }
+
+        private void btnCopyPayload_Click(object sender, EventArgs e)
+        {
+            rtbJsonToSend.Text = Clipboard.GetText();
+        }
+
+        private void btnCopyOutput_Click(object sender, EventArgs e)
+        {
+
+            rtbOutput.Text = Clipboard.GetText();
         }
     }
 

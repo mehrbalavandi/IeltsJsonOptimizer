@@ -36,6 +36,10 @@
             btnGeneratePayload = new Button();
             btnMergeAiResponse = new Button();
             btnSelectFile = new Button();
+            btnCopyPayload = new Button();
+            btnCopyOutput = new Button();
+            btnPasteInput = new Button();
+            btnPasteResponse = new Button();
             SuspendLayout();
             // 
             // rtbInput
@@ -73,7 +77,7 @@
             // btnGeneratePayload
             // 
             btnGeneratePayload.AutoSize = true;
-            btnGeneratePayload.Location = new Point(119, 631);
+            btnGeneratePayload.Location = new Point(119, 683);
             btnGeneratePayload.Name = "btnGeneratePayload";
             btnGeneratePayload.Size = new Size(106, 25);
             btnGeneratePayload.TabIndex = 5;
@@ -84,7 +88,7 @@
             // btnMergeAiResponse
             // 
             btnMergeAiResponse.AutoSize = true;
-            btnMergeAiResponse.Location = new Point(231, 631);
+            btnMergeAiResponse.Location = new Point(231, 683);
             btnMergeAiResponse.Name = "btnMergeAiResponse";
             btnMergeAiResponse.Size = new Size(112, 25);
             btnMergeAiResponse.TabIndex = 6;
@@ -95,7 +99,7 @@
             // btnSelectFile
             // 
             btnSelectFile.AutoSize = true;
-            btnSelectFile.Location = new Point(12, 631);
+            btnSelectFile.Location = new Point(12, 683);
             btnSelectFile.Name = "btnSelectFile";
             btnSelectFile.Size = new Size(101, 25);
             btnSelectFile.TabIndex = 7;
@@ -103,11 +107,59 @@
             btnSelectFile.UseVisualStyleBackColor = true;
             btnSelectFile.Click += btnSelectFile_Click;
             // 
+            // btnCopyPayload
+            // 
+            btnCopyPayload.AutoSize = true;
+            btnCopyPayload.Location = new Point(559, 593);
+            btnCopyPayload.Name = "btnCopyPayload";
+            btnCopyPayload.Size = new Size(29, 25);
+            btnCopyPayload.TabIndex = 9;
+            btnCopyPayload.Text = "⧉";
+            btnCopyPayload.UseVisualStyleBackColor = true;
+            btnCopyPayload.Click += btnCopyPayload_Click;
+            // 
+            // btnCopyOutput
+            // 
+            btnCopyOutput.AutoSize = true;
+            btnCopyOutput.Location = new Point(1141, 593);
+            btnCopyOutput.Name = "btnCopyOutput";
+            btnCopyOutput.Size = new Size(29, 25);
+            btnCopyOutput.TabIndex = 11;
+            btnCopyOutput.Text = "⧉";
+            btnCopyOutput.UseVisualStyleBackColor = true;
+            btnCopyOutput.Click += btnCopyOutput_Click;
+            // 
+            // btnPasteInput
+            // 
+            btnPasteInput.AutoSize = true;
+            btnPasteInput.Location = new Point(12, 593);
+            btnPasteInput.Name = "btnPasteInput";
+            btnPasteInput.Size = new Size(29, 25);
+            btnPasteInput.TabIndex = 12;
+            btnPasteInput.Text = "📋";
+            btnPasteInput.UseVisualStyleBackColor = true;
+            btnPasteInput.Click += btnPasteInput_Click;
+            // 
+            // btnPasteResponse
+            // 
+            btnPasteResponse.AutoSize = true;
+            btnPasteResponse.Location = new Point(594, 593);
+            btnPasteResponse.Name = "btnPasteResponse";
+            btnPasteResponse.Size = new Size(29, 25);
+            btnPasteResponse.TabIndex = 13;
+            btnPasteResponse.Text = "📋";
+            btnPasteResponse.UseVisualStyleBackColor = true;
+            btnPasteResponse.Click += btnPasteResponse_Click;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1182, 664);
+            ClientSize = new Size(1182, 720);
+            Controls.Add(btnPasteResponse);
+            Controls.Add(btnPasteInput);
+            Controls.Add(btnCopyOutput);
+            Controls.Add(btnCopyPayload);
             Controls.Add(btnSelectFile);
             Controls.Add(btnMergeAiResponse);
             Controls.Add(btnGeneratePayload);
@@ -130,5 +182,9 @@
         private Button btnGeneratePayload;
         private Button btnMergeAiResponse;
         private Button btnSelectFile;
+        private Button btnCopyPayload;
+        private Button btnCopyOutput;
+        private Button btnPasteInput;
+        private Button btnPasteResponse;
     }
 }
