@@ -28,7 +28,6 @@
         /// </summary>
         private void InitializeComponent()
         {
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             rtbInput = new RichTextBox();
             rtbOutput = new RichTextBox();
             rtbJsonToSend = new RichTextBox();
@@ -48,7 +47,7 @@
             rtbInput.Name = "rtbInput";
             rtbInput.Size = new Size(285, 606);
             rtbInput.TabIndex = 0;
-            rtbInput.Text = resources.GetString("rtbInput.Text");
+            rtbInput.Text = "";
             // 
             // rtbOutput
             // 
@@ -72,7 +71,7 @@
             rtbAiResponse.Name = "rtbAiResponse";
             rtbAiResponse.Size = new Size(285, 606);
             rtbAiResponse.TabIndex = 4;
-            rtbAiResponse.Text = resources.GetString("rtbAiResponse.Text");
+            rtbAiResponse.Text = "";
             // 
             // btnGeneratePayload
             // 
