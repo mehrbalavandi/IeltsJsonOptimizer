@@ -325,69 +325,6 @@ namespace IeltsJsonOptimizer
             _blankWord2Set.Clear();
         }
 
-        private void btnSelectFile_Click(object sender, EventArgs e)
-        {
-            using (OpenFileDialog openFileDialog = new OpenFileDialog())
-            {
-                openFileDialog.Title = "انتخاب فایل اصلی کتاب (Word)";
-                openFileDialog.Filter = "Word Documents (*.docx)|*.docx";
-
-                if (openFileDialog.ShowDialog() == DialogResult.OK)
-                {
-                    string filePath = openFileDialog.FileName;
-                    string outputDir = Path.GetDirectoryName(filePath);
-
-                    ResetCounters();
-
-                    // ۱. پردازش کتاب اصلی
-                    List<PageData> pages = ProcessWordDocument(filePath, outputDir);
-
-                    // ادغام پاراگراف‌های BlankWord2 برای کتاب اصلی
-                    foreach (var page in pages)
-                    {
-                        page.Paragraphs = MergeBlankWord2Paragraphs(page.Paragraphs);
-                    }
-
-                    List<ParagraphData> audioScripts = new List<ParagraphData>();
-
-                    // ۲. دریافت فایل صوتی در صورت نیاز
-                    DialogResult hasAudio = MessageBox.Show(
-                        "آیا فایل اسکریپت صوتی (Audio Script) هم برای این کتاب دارید؟",
-                        "اسکریپت صوتی",
-                        MessageBoxButtons.YesNo,
-                        MessageBoxIcon.Question);
-
-                    if (hasAudio == DialogResult.Yes)
-                    {
-                        using (OpenFileDialog audioDialog = new OpenFileDialog())
-                        {
-                            audioDialog.Title = "انتخاب فایل اسکریپت صوتی (Word)";
-                            audioDialog.Filter = "Word Documents (*.docx)|*.docx";
-                            if (audioDialog.ShowDialog() == DialogResult.OK)
-                            {
-                                audioScripts = ProcessAudioScriptWordFile(audioDialog.FileName, outputDir);
-                                // ادغام پاراگراف‌های BlankWord2 برای اسکریپت‌های صوتی
-                                audioScripts = MergeBlankWord2Paragraphs(audioScripts);
-                            }
-                        }
-                    }
-
-                    // ۳. تولید خروجی JSON یکپارچه
-                    var exportData = new BookExportData
-                    {
-                        Pages = pages,
-                        AudioScripts = audioScripts
-                    };
-
-                    string jsonOutput = JsonConvert.SerializeObject(exportData, Formatting.Indented,
-                        new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
-
-                    File.WriteAllText(Path.Combine(outputDir, "output.json"), jsonOutput);
-                    MessageBox.Show("فایل با موفقیت پردازش و ذخیره شد!", "عملیات موفق", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-            }
-        }
-
         private List<PageData> ProcessWordDocument(string filePath, string outputDir)
         {
             using var wordDocument = WordprocessingDocument.Open(filePath, false);
