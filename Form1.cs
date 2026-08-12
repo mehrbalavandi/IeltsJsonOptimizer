@@ -33,6 +33,7 @@ namespace IeltsJsonOptimizer
         public Form1()
         {
             InitializeComponent();
+            this.Icon = System.Drawing.Icon.ExtractAssociatedIcon(System.Windows.Forms.Application.ExecutablePath);
 
             rtbInput.Clear();
             rtbJsonToSend.Clear();
